@@ -1,7 +1,7 @@
 on:
-  push:
-    tags:
-      - '*'
+  watch:
+    types: started
+
 name: "Build & Release"
 jobs:
   build:
@@ -41,12 +41,8 @@ jobs:
           $hash = Get-FileHash "build/RevisionTool-Setup.exe" -Algorithm SHA256
           echo "SHA256_HASH=$($hash.Hash)" | Out-File -FilePath $env:GITHUB_ENV -Append
         
-      - name: Release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload
+        uses: actions/upload-artifact@v3
         with:
-          repo_token: ${{ secrets.TOKEN }}
-          file: build/RevisionTool-Setup.exe
-          asset_name: RevisionTool-Setup.exe
-          tag: ${{ github.ref }}
-          overwrite: true
-          body: "SHA256: `${{ env.SHA256_HASH }}`"
+          name: RevisionTool-Setup.exe
+          path: build/RevisionTool-Setup.exe
