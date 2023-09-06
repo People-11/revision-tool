@@ -37,16 +37,8 @@ void main() async {
 
   bool isSupported = false;
 
-<<<<<<< HEAD
-  if (buildNumber > 19043) {
-      runApp(const MyApp(isSupported: true));
-  }
-  else {
-      runApp(const MyApp(isSupported: false));
-=======
   if (buildNumber > 19043) {
     isSupported = true;
->>>>>>> 7b55fac9006aee9c24e9afdc0dc3c709a4ac630f
   }
 
   runApp(MyApp(isSupported: isSupported));
