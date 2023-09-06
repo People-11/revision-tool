@@ -1,13 +1,11 @@
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:revitool/l10n/generated/localizations.dart';
-// import 'package:flutter/material.dart';
-
-import 'package:revitool/utils.dart';
-import 'package:revitool/widgets/card_highlight.dart';
-import 'package:revitool/widgets/subtitle.dart';
-import 'package:win32_registry/win32_registry.dart';
-import 'package:process_run/shell_run.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart' as msicons;
+
+import '../../l10n/generated/localizations.dart';
+import '../../services/performance_service.dart';
+import '../../utils.dart';
+import '../../widgets/card_highlight.dart';
+import '../../widgets/subtitle.dart';
 
 class PerformancePage extends StatefulWidget {
   const PerformancePage({super.key});
@@ -17,68 +15,29 @@ class PerformancePage extends StatefulWidget {
 }
 
 class _PerformancePageState extends State<PerformancePage> {
-  bool sfBool = (readRegistryInt(RegistryHive.localMachine,
-                  r'SYSTEM\ControlSet001\Services\rdyboost', 'Start') ==
-              4 &&
-          readRegistryInt(RegistryHive.localMachine,
-                  r'SYSTEM\ControlSet001\Services\SysMain', 'Start') ==
-              4)
-      ? false
-      : true;
+  final PerformanceService _performanceService = PerformanceService();
+  late final _sfBool =
+      ValueNotifier<bool>(_performanceService.statusSuperfetch);
+  late final _mcBool =
+      ValueNotifier<bool>(_performanceService.statusMemoryCompression);
+  late final _iTSXBool =
+      ValueNotifier<bool>(_performanceService.statusIntelTSX);
+  late final _foBool =
+      ValueNotifier<bool>(_performanceService.statusFullscreenOptimization);
 
-  bool mcBool = readRegistryInt(
-          RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-          'isMemoryCompressionEnabled') ==
-      1;
+  /// Experimental
+  late final _owgBool =
+      ValueNotifier<bool>(_performanceService.statusWindowedOptimization);
+  late final _cStatesBool =
+      ValueNotifier<bool>(_performanceService.statusCStates);
 
-  bool foBool = readRegistryInt(RegistryHive.currentUser,
-          r'System\GameConfigStore', "GameDVR_FSEBehaviorMode") ==
-      0;
-
-  bool iTSXBool = readRegistryInt(
-          RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\Session Manager\Kernel',
-          'DisableTsx') ==
-      0;
-
-// Experimental
-
-  bool owgBool = readRegistryString(
-              RegistryHive.currentUser,
-              r'Software\Microsoft\DirectX\UserGpuPreferences',
-              "DirectXUserGlobalSettings")
-          ?.contains("SwapEffectUpgradeEnable=1") ??
-      false;
-
-  bool cStatesBool = readRegistryInt(RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\Processor', 'Capabilities') ==
-      516198;
-
-//NTFS
-  bool ntfsLTABool = readRegistryInt(
-          RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\FileSystem',
-          "RefsDisableLastAccessUpdate") ==
-      1;
-  bool ntfsEdTBool = readRegistryInt(
-          RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\FileSystem',
-          "NtfsDisable8dot3NameCreation") ==
-      1;
-  bool ntfsMUBool = readRegistryInt(RegistryHive.localMachine,
-          r'SYSTEM\ControlSet001\Control\FileSystem', "NtfsMemoryUsage") ==
-      2;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  //NTFS
+  late final _ntfsLTABool =
+      ValueNotifier<bool>(_performanceService.statusLastTimeAccessNTFS);
+  late final _ntfsEdTBool =
+      ValueNotifier<bool>(_performanceService.status8dot3NamingNTFS);
+  late final _ntfsMUBool =
+      ValueNotifier<bool>(_performanceService.statusMemoryUsageNTFS);
 
   @override
   Widget build(BuildContext context) {
@@ -91,65 +50,26 @@ class _PerformancePageState extends State<PerformancePage> {
           icon: msicons.FluentIcons.top_speed_20_regular,
           label: ReviLocalizations.of(context).perfSuperfetchLabel,
           description: ReviLocalizations.of(context).perfSuperfetchDescription,
-          switchBool: sfBool,
+          switchBool: _sfBool,
+          requiresRestart: true,
           function: (value) async {
-            setState(() {
-              sfBool = value;
-            });
-            if (sfBool) {
-              await run(
-                  '"$directoryExe\\MinSudo.exe" --NoLogo --TrustedInstaller cmd /min /c "$directoryExe\\EnableSF.bat"');
-            } else {
-              writeRegistryDword(
-                  Registry.localMachine,
-                  r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-                  'isMemoryCompressionEnabled',
-                  0);
-              await run(
-                  '"$directoryExe\\MinSudo.exe" --NoLogo --TrustedInstaller cmd /min /c "$directoryExe\\DisableSF.bat"');
-            }
-            // ignore: use_build_context_synchronously
-            showDialog(
-              context: context,
-              builder: (context) => ContentDialog(
-                content: Text(ReviLocalizations.of(context).restartDialog),
-                actions: [
-                  Button(
-                    child: Text(ReviLocalizations.of(context).okButton),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            );
+            _mcBool.value = value;
+            _sfBool.value
+                ? _performanceService.enableSuperfetch()
+                : _performanceService.disableSuperfetch();
           },
         ),
-        if (sfBool) ...[
+        if (_sfBool.value) ...[
           CardHighlightSwitch(
             icon: msicons.FluentIcons.ram_20_regular,
             label: ReviLocalizations.of(context).perfMCLabel,
             description: ReviLocalizations.of(context).perfMCDescription,
-            switchBool: mcBool,
+            switchBool: _mcBool,
             function: (value) {
-              setState(() {
-                mcBool = value;
-              });
-              if (mcBool) {
-                run('PowerShell -NonInteractive -NoLogo -NoProfile -Command "Enable-MMAgent -mc"');
-                writeRegistryDword(
-                    Registry.localMachine,
-                    r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-                    'isMemoryCompressionEnabled',
-                    1);
-              } else {
-                run('PowerShell -NonInteractive -NoLogo -NoProfile -Command "Disable-MMAgent -mc"');
-                writeRegistryDword(
-                    Registry.localMachine,
-                    r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-                    'isMemoryCompressionEnabled',
-                    0);
-              }
+              _mcBool.value = value;
+              _mcBool.value
+                  ? _performanceService.enableMemoryCompression()
+                  : _performanceService.disableMemoryCompression();
             },
           ),
         ],
@@ -157,113 +77,24 @@ class _PerformancePageState extends State<PerformancePage> {
           icon: msicons.FluentIcons.transmission_20_regular,
           label: ReviLocalizations.of(context).perfITSXLabel,
           description: ReviLocalizations.of(context).perfITSXDescription,
-          switchBool: iTSXBool,
+          switchBool: _iTSXBool,
           function: (value) async {
-            setState(() {
-              iTSXBool = value;
-            });
-            if (iTSXBool) {
-              writeRegistryDword(
-                  Registry.localMachine,
-                  r'SYSTEM\CurrentControlSet\Control\Session Manager\kernel',
-                  'DisableTsx',
-                  0);
-            } else {
-              writeRegistryDword(
-                  Registry.localMachine,
-                  r'SYSTEM\CurrentControlSet\Control\Session Manager\kernel',
-                  'DisableTsx',
-                  1);
-            }
+            _iTSXBool.value = value;
+            _iTSXBool.value
+                ? _performanceService.enableIntelTSX()
+                : _performanceService.disableIntelTSX();
           },
         ),
         CardHighlightSwitch(
           icon: msicons.FluentIcons.desktop_20_regular,
           label: ReviLocalizations.of(context).perfFOLabel,
           description: ReviLocalizations.of(context).perfFODescription,
-          switchBool: foBool,
+          switchBool: _foBool,
           function: (value) async {
-            setState(() {
-              foBool = value;
-            });
-            if (foBool) {
-              writeRegistryDword(Registry.currentUser,
-                  r'System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 0);
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'GameDVR_FSEBehavior');
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'Win32_AutoGameModeDefaultProfile');
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'Win32_GameModeRelatedProcesses');
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'GameDVR_HonorUserFSEBehaviorMode');
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'GameDVR_DXGIHonorFSEWindowsCompatible');
-              deleteRegistry(Registry.currentUser, r'System\GameConfigStore',
-                  'GameDVR_EFSEFeatureFlags');
-
-              writeRegistryDword(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'GameDVR_FSEBehaviorMode',
-                  0);
-              deleteRegistry(Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore', 'GameDVR_FSEBehavior');
-              deleteRegistry(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'Win32_AutoGameModeDefaultProfile');
-              deleteRegistry(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'Win32_GameModeRelatedProcesses');
-              deleteRegistry(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'GameDVR_HonorUserFSEBehaviorMode');
-              deleteRegistry(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'GameDVR_DXGIHonorFSEWindowsCompatible');
-              deleteRegistry(
-                  Registry.allUsers,
-                  r'.DEFAULT\System\GameConfigStore',
-                  'GameDVR_EFSEFeatureFlags');
-            } else {
-              writeRegistryDword(Registry.currentUser,
-                  r'System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 2);
-              writeRegistryDword(
-                  Registry.currentUser,
-                  r'System\GameConfigStore',
-                  'GameDVR_HonorUserFSEBehaviorMode',
-                  1);
-              writeRegistryDword(
-                  Registry.currentUser,
-                  r'System\GameConfigStore',
-                  'GameDVR_DXGIHonorFSEWindowsCompatible',
-                  1);
-              writeRegistryDword(Registry.currentUser,
-                  r'System\GameConfigStore', 'GameDVR_EFSEFeatureFlags', 0);
-              writeRegistryDword(Registry.currentUser,
-                  r'System\GameConfigStore', 'GameDVR_FSEBehavior', 2);
-
-              writeRegistryDword(Registry.allUsers, r'System\GameConfigStore',
-                  'GameDVR_FSEBehaviorMode', 2);
-              writeRegistryDword(Registry.allUsers, r'System\GameConfigStore',
-                  'GameDVR_HonorUserFSEBehaviorMode', 1);
-              writeRegistryDword(Registry.allUsers, r'System\GameConfigStore',
-                  'GameDVR_DXGIHonorFSEWindowsCompatible', 1);
-              writeRegistryDword(Registry.allUsers, r'System\GameConfigStore',
-                  'GameDVR_EFSEFeatureFlags', 0);
-              writeRegistryDword(Registry.allUsers, r'System\GameConfigStore',
-                  'GameDVR_FSEBehavior', 2);
-              await Shell().run(r'''
-                      reg add "HKCU\System\GameConfigStore" /v "Win32_AutoGameModeDefaultProfile" /t REG_BINARY /d "01000100000000000000000000000000000000000000000000000000000000000000000000000000" /f
-                      reg add "HKCU\System\GameConfigStore" /v "Win32_GameModeRelatedProcesses" /t REG_BINARY /d "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" /f
-                      reg add "HKU\.DEFAULT\System\GameConfigStore" /v "Win32_AutoGameModeDefaultProfile" /t REG_BINARY /d "01000100000000000000000000000000000000000000000000000000000000000000000000000000" /f
-                      reg add "HKU\.DEFAULT\System\GameConfigStore" /v "Win32_GameModeRelatedProcesses" /t REG_BINARY /d "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" /f
-                    ''');
-            }
+            _foBool.value = value;
+            _foBool.value
+                ? _performanceService.enableFullscreenOptimization()
+                : _performanceService.disableFullscreenOptimization();
           },
         ),
         if (w11) ...[
@@ -271,94 +102,65 @@ class _PerformancePageState extends State<PerformancePage> {
             icon: msicons.FluentIcons.desktop_mac_20_regular,
             label: ReviLocalizations.of(context).perfOWGLabel,
             description: ReviLocalizations.of(context).perfOWGDescription,
-            switchBool: owgBool,
+            switchBool: _owgBool,
             function: (value) {
-              setState(() {
-                owgBool = value;
-              });
-              if (owgBool) {
-                writeRegistryString(
-                    Registry.currentUser,
-                    r'Software\Microsoft\DirectX\UserGpuPreferences',
-                    'DirectXUserGlobalSettings',
-                    r'SwapEffectUpgradeEnable=1;');
-              } else {
-                deleteRegistry(
-                    Registry.currentUser,
-                    r'Software\Microsoft\DirectX\UserGpuPreferences',
-                    'DirectXUserGlobalSettings');
-              }
+              _owgBool.value = value;
+
+              _owgBool.value
+                  ? _performanceService.enableWindowedOptimization()
+                  : _performanceService.disableWindowedOptimization();
             },
           ),
         ],
-        CardHighlightSwitch(
-          icon: msicons.FluentIcons.sleep_20_regular,
-          label: ReviLocalizations.of(context).perfCStatesLabel,
-          description: ReviLocalizations.of(context).perfCStatesDescription,
-          switchBool: cStatesBool,
-          function: (value) async {
-            setState(() {
-              cStatesBool = value;
-            });
-            if (cStatesBool) {
-              writeRegistryDword(
-                  Registry.localMachine,
-                  r'SYSTEM\ControlSet001\Control\Processor',
-                  'Capabilities',
-                  516198);
-            } else {
-              deleteRegistry(Registry.localMachine,
-                  r'SYSTEM\ControlSet001\Control\Processor', 'Capabilities');
-            }
-          },
-        ),
-        if (expBool) ...[
-          subtitle(content: Text(ReviLocalizations.of(context).perfSectionFS)),
+        if (expBool.value) ...[
+          CardHighlightSwitch(
+            icon: msicons.FluentIcons.sleep_20_regular,
+            label: ReviLocalizations.of(context).perfCStatesLabel,
+            description: ReviLocalizations.of(context).perfCStatesDescription,
+            switchBool: _cStatesBool,
+            function: (value) async {
+              _cStatesBool.value = value;
+              _cStatesBool.value
+                  ? _performanceService.disableCStates()
+                  : _performanceService.enableCStates();
+            },
+          ),
+          Subtitle(content: Text(ReviLocalizations.of(context).perfSectionFS)),
           CardHighlightSwitch(
             icon: msicons.FluentIcons.document_bullet_list_clock_20_regular,
             label: ReviLocalizations.of(context).perfLTALabel,
             description: ReviLocalizations.of(context).perfLTADescription,
-            switchBool: ntfsLTABool,
+            switchBool: _ntfsLTABool,
             function: (value) async {
-              setState(() {
-                ntfsLTABool = value;
-              });
-              if (ntfsLTABool) {
-                run('fsutil behavior set disableLastAccess 1');
-              } else {
-                run('fsutil behavior set disableLastAccess 0');
-              }
+              _ntfsLTABool.value = value;
+              print(_ntfsLTABool.value);
+              _ntfsLTABool.value
+                  ? _performanceService.disableLastTimeAccessNTFS()
+                  : _performanceService.enableLastTimeAccessNTFS();
             },
           ),
           CardHighlightSwitch(
             icon: msicons.FluentIcons.hard_drive_20_regular,
             label: ReviLocalizations.of(context).perfEdTLabel,
             description: ReviLocalizations.of(context).perfEdTDescription,
-            switchBool: ntfsEdTBool,
-            function: (value) {
-              setState(() {
-                ntfsEdTBool = value;
-              });
-              if (ntfsEdTBool) {
-                run('fsutil behavior set disable8dot3 1');
-              } else {
-                run('fsutil behavior set disable8dot3 0');
-              }
+            switchBool: _ntfsEdTBool,
+            function: (value) async {
+              _ntfsEdTBool.value = value;
+
+              _ntfsEdTBool.value
+                  ? _performanceService.disable8dot3NamingNTFS()
+                  : _performanceService.enable8dot3NamingNTFS();
             },
           ),
           CardHighlightSwitch(
             icon: msicons.FluentIcons.memory_16_regular,
             label: ReviLocalizations.of(context).perfMULabel,
-            switchBool: ntfsMUBool,
+            switchBool: _ntfsMUBool,
             function: (value) async {
-              setState(() {
-                ntfsMUBool = value;
-              });
-              if (ntfsMUBool) {
-                run('fsutil behavior set memoryusage 2');
-              } else {
-                run('fsutil behavior set memoryusage 1');
-              }
+              _ntfsMUBool.value = value;
+              _ntfsMUBool.value
+                  ? _performanceService.enableMemoryUsageNTFS()
+                  : _performanceService.disableMemoryUsageNTFS();
             },
             codeSnippet: ReviLocalizations.of(context).perfMUDescription,
           ),

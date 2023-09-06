@@ -11,15 +11,18 @@ import 'package:window_plus/window_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  createRegistryKey(Registry.localMachine, r'SOFTWARE\Revision\Revision Tool');
 
-  if (readRegistryString(RegistryHive.localMachine,
+  // createRegistryKey(Registry.localMachine, r'SOFTWARE\Revision\Revision Tool');
+
+  if (registryUtilsService.readString(RegistryHive.localMachine,
           r'SOFTWARE\Revision\Revision Tool', 'ThemeMode') ==
       null) {
-    writeRegistryString(Registry.localMachine,
+    registryUtilsService.writeString(Registry.localMachine,
         r'SOFTWARE\Revision\Revision Tool', 'ThemeMode', ThemeMode.system.name);
-    writeRegistryDword(Registry.localMachine,
+    registryUtilsService.writeDword(Registry.localMachine,
         r'SOFTWARE\Revision\Revision Tool', 'Experimental', 0);
+    registryUtilsService.writeString(Registry.localMachine,
+        r'SOFTWARE\Revision\Revision Tool', 'Language', 'en_US');
   }
   final settingsController = AppTheme(SettingsService());
   await settingsController.loadSettings();
@@ -32,17 +35,26 @@ void main() async {
   );
   await WindowPlus.instance.setMinimumSize(const Size(515, 330));
 
-  final buildNumber = int.parse(readRegistryString(
-      RegistryHive.localMachine,
-      r'SOFTWARE\Microsoft\Windows NT\CurrentVersion\',
-      'CurrentBuildNumber') as String);
+  bool isSupported = false;
 
+<<<<<<< HEAD
   if (buildNumber > 19043) {
       runApp(const MyApp(isSupported: true));
   }
   else {
       runApp(const MyApp(isSupported: false));
+=======
+  if (registryUtilsService.readString(
+              RegistryHive.localMachine,
+              r'SOFTWARE\Microsoft\Windows NT\CurrentVersion',
+              'EditionSubVersion') ==
+          'ReviOS' &&
+      buildNumber > 19043) {
+    isSupported = true;
+>>>>>>> 7b55fac9006aee9c24e9afdc0dc3c709a4ac630f
   }
+
+  runApp(MyApp(isSupported: isSupported));
 }
 
 class MyApp extends StatelessWidget {
@@ -64,7 +76,7 @@ class MyApp extends StatelessWidget {
             ReviLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          locale: appTheme.locale,
+          locale: Locale(appLanguage.split('_')[0], appLanguage.split('_')[1]),
           supportedLocales: ReviLocalizations.supportedLocales,
           themeMode: appTheme.themeMode,
           color: appTheme.color,
@@ -75,18 +87,22 @@ class MyApp extends StatelessWidget {
             cardColor: const Color.fromARGB(255, 43, 43, 43),
             visualDensity: VisualDensity.standard,
             focusTheme: FocusThemeData(
-              glowFactor: is10footScreen() ? 2.0 : 0.0,
+              glowFactor: is10footScreen(context) ? 2.0 : 0.0,
+            ),
+            resources: const ResourceDictionary.dark(
+              cardStrokeColorDefault: Color.fromARGB(255, 29, 29, 29),
             ),
           ),
           theme: FluentThemeData(
-            accentColor: appTheme.color,
-            visualDensity: VisualDensity.standard,
-            scaffoldBackgroundColor: const Color.fromRGBO(243, 243, 243, 100),
-            cardColor: const Color.fromARGB(255, 251, 251, 251),
-            focusTheme: FocusThemeData(
-              glowFactor: is10footScreen() ? 2.0 : 0.0,
-            ),
-          ),
+              accentColor: appTheme.color,
+              visualDensity: VisualDensity.standard,
+              scaffoldBackgroundColor: const Color.fromRGBO(243, 243, 243, 100),
+              cardColor: const Color.fromARGB(255, 251, 251, 251),
+              focusTheme: FocusThemeData(
+                glowFactor: is10footScreen(context) ? 2.0 : 0.0,
+              ),
+              resources: const ResourceDictionary.light(
+                  cardStrokeColorDefault: Color.fromARGB(255, 229, 229, 229))),
           home: isSupported ? const HomePage() : const UnsupportedError(),
         );
       },

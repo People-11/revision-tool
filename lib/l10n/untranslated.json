@@ -1,1 +1,65 @@
-{}
+{
+  "de": [
+    "experimental",
+    "warning",
+    "install",
+    "installing",
+    "close",
+    "search",
+    "settingsLanguageDescription",
+    "pageMSStore",
+    "msstoreSearchingPackages",
+    "msstoreWait",
+    "msstorePackagesPrompt",
+    "msstorePackagesNotFound"
+  ],
+
+  "pt": [
+    "experimental",
+    "warning",
+    "install",
+    "installing",
+    "close",
+    "search",
+    "wuPauseLabel",
+    "wuPauseDescription",
+    "settingsLanguageDescription",
+    "pageMSStore",
+    "msstoreSearchingPackages",
+    "msstoreWait",
+    "msstorePackagesPrompt",
+    "msstorePackagesNotFound"
+  ],
+
+  "zh": [
+    "experimental",
+    "warning",
+    "install",
+    "installing",
+    "close",
+    "search",
+    "wuPauseLabel",
+    "wuPauseDescription",
+    "settingsLanguageDescription",
+    "pageMSStore",
+    "msstoreSearchingPackages",
+    "msstoreWait",
+    "msstorePackagesPrompt",
+    "msstorePackagesNotFound"
+  ],
+
+  "zh_TW": [
+    "experimental",
+    "warning",
+    "install",
+    "installing",
+    "close",
+    "search",
+    "settingsLanguageDescription",
+    "pageMSStore",
+    "msstoreSearchingPackages",
+    "msstoreWait",
+    "msstorePackagesPrompt",
+    "msstorePackagesNotFound"
+  ]
+}

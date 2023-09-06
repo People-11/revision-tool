@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Revision Tool"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "Revision"
 #define MyAppURL "https://www.revi.cc/"
 #define MyAppExeName "revitool.exe"
@@ -26,6 +26,7 @@ OutputBaseFilename=RevisionTool-Setup
 SetupIconFile={#SourcePath}\windows\runner\resources\revision_icon.ico
 Compression=lzma
 SolidCompression=yes
+UninstallDisplayIcon={app}\{#MyAppExeName}
 WizardStyle=modern
 PrivilegesRequired=admin
 

@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:process_run/shell_run.dart';
 import 'package:revitool/l10n/generated/localizations.dart';
 import 'package:revitool/screens/pages/miscellaneous_page.dart';
+import 'package:revitool/screens/pages/ms_store_page.dart';
 import 'package:revitool/screens/pages/performance_page.dart';
 import 'package:revitool/screens/pages/security_page.dart';
 import 'package:revitool/screens/pages/updates_page.dart';
@@ -15,6 +17,8 @@ import 'package:win32_registry/win32_registry.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart' as msicons;
 import 'package:window_plus/window_plus.dart';
 
+import '../widgets/card_button.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -23,13 +27,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int? topIndex;
-  bool maximize = true;
-
-  final viewKey = GlobalKey(debugLabel: 'Navigation View Key');
-  final searchKey = GlobalKey(debugLabel: 'Search Bar Key');
-  final searchFocusNode = FocusNode();
-  final searchController = TextEditingController();
+  int? _topIndex;
+  final _viewKey = GlobalKey(debugLabel: 'Navigation View Key');
+  final _searchKey = GlobalKey(debugLabel: 'Search Bar Key');
+  final _searchFocusNode = FocusNode();
+  final _searchController = TextEditingController();
 
   AutoSuggestBoxItem? selectedPage;
 
@@ -40,8 +42,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    searchController.dispose();
-    searchFocusNode.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -122,7 +124,7 @@ class _HomePageState extends State<HomePage> {
 
     return SafeArea(
       child: NavigationView(
-        key: viewKey,
+        key: _viewKey,
         contentShape: const RoundedRectangleBorder(
           side: BorderSide(width: 0, color: Colors.transparent),
           borderRadius: BorderRadius.only(
@@ -135,8 +137,8 @@ class _HomePageState extends State<HomePage> {
           actions: WindowCaption(),
         ),
         pane: NavigationPane(
-          selected: topIndex ?? 0,
-          onChanged: (index) => setState(() => topIndex = index),
+          selected: _topIndex ?? 0,
+          onChanged: (index) => setState(() => _topIndex = index),
           displayMode: MediaQuery.of(context).size.width >= 800
               ? PaneDisplayMode.open
               : PaneDisplayMode.minimal,
@@ -171,8 +173,7 @@ class _HomePageState extends State<HomePage> {
                     const Text(
                       "Proud ReviOS user",
                       style: TextStyle(
-                        fontSize: 12,
-                      ),
+                          fontSize: 11, fontWeight: FontWeight.normal),
                     ),
                   ],
                 )
@@ -180,15 +181,15 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           autoSuggestBox: AutoSuggestBox(
-            key: searchKey,
+            key: _searchKey,
             trailingIcon: const Padding(
               padding: EdgeInsets.only(right: 7.0, bottom: 2),
               child: Icon(
                 msicons.FluentIcons.search_20_regular,
               ),
             ),
-            focusNode: searchFocusNode,
-            controller: searchController,
+            focusNode: _searchFocusNode,
+            controller: _searchController,
             placeholder: ReviLocalizations.of(context).suggestionBoxPlaceholder,
             items: items.whereType<PaneItem>().map((page) {
               assert(page.title is Text);
@@ -201,9 +202,9 @@ class _HomePageState extends State<HomePage> {
                     items: items,
                   ).effectiveIndexOf(page);
 
-                  setState(() => topIndex = itemIndex);
+                  setState(() => _topIndex = itemIndex);
                   await Future.delayed(const Duration(milliseconds: 17));
-                  searchController.clear();
+                  _searchController.clear();
                 },
               );
             }).toList(),
@@ -218,6 +219,14 @@ class _HomePageState extends State<HomePage> {
           footerItems: [
             PaneItem(
               icon: const Icon(
+                msicons.FluentIcons.store_microsoft_24_regular,
+                size: 20,
+              ),
+              title: const Text("MS Store"),
+              body: const MSStorePage(),
+            ),
+            PaneItem(
+              icon: const Icon(
                 msicons.FluentIcons.settings_24_regular,
                 size: 20,
               ),
@@ -228,7 +237,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         onOpenSearch: () {
-          searchFocusNode.requestFocus();
+          _searchFocusNode.requestFocus();
         },
       ),
     );
@@ -240,77 +249,133 @@ class Home extends StatelessWidget {
     Key? key,
   }) : super(key: key);
 
+  static final _homeCardButtons = [
+    CardButtonWidget(
+      icon: FluentIcons.git_graph,
+      title: "GitHub",
+      subtitle: "Source Code",
+      onPressed: () async => await run(
+          "rundll32 url.dll,FileProtocolHandler https://github.com/meetrevision"),
+    ),
+    CardButtonWidget(
+      icon: msicons.FluentIcons.drink_coffee_20_regular,
+      title: "Donation",
+      subtitle: "Support the project",
+      onPressed: () async => await run(
+          "rundll32 url.dll,FileProtocolHandler https://www.buymeacoffee.com/meetrevision"),
+    ),
+    CardButtonWidget(
+      icon: msicons.FluentIcons.chat_help_20_regular,
+      title: "Discord",
+      subtitle: "Join our server",
+      onPressed: () async => await run(
+          "rundll32 url.dll,FileProtocolHandler https://www.revi.cc/docs/faq"),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldPage.scrollable(
       resizeToAvoidBottomInset: false,
       children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: MediaQuery.of(context).size.width - 16,
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.72),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                gradient: FluentTheme.of(context).brightness.isDark
+                    ? const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(0, 0, 0, 0.85),
+                          Color.fromRGBO(0, 0, 0, 0.43),
+                          Color.fromRGBO(0, 0, 0, 0)
+                        ],
+                        stops: [0.0, 0.4, 1.0],
+                      )
+                    : const LinearGradient(
+                        colors: [
+                          Color.fromRGBO(16, 16, 16, 0.8),
+                          Color.fromRGBO(155, 155, 155, 0.5),
+                          Color.fromRGBO(255, 255, 255, 0)
+                        ],
+                        stops: [0.0, 0.6, 1.0],
+                      ),
+              ),
+              padding: const EdgeInsets.only(left: 50, top: 150),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(ReviLocalizations.of(context).homeWelcome,
+                      style: const TextStyle(
+                          fontSize: 16, color: Color(0xB7FFFFFF))),
+                  const Text(
+                    "Revision Tool",
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: Color(0xFFffffff),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(ReviLocalizations.of(context).homeDescription,
+                        style: const TextStyle(
+                            fontSize: 16, color: Color(0xB7FFFFFF))
+                        //     : const TextStyle(
+                        //         fontSize: 16,
+                        //         color: Color.fromARGB(255, 117, 117, 117)),
+                        ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5, bottom: 5),
+                    child: SizedBox(
+                      width: 175,
+                      child: Button(
+                        child: Text(ReviLocalizations.of(context).homeReviLink),
+                        onPressed: () async => await run(
+                            "rundll32 url.dll,FileProtocolHandler https://www.revi.cc"),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: SizedBox(
+                      width: 175,
+                      child: FilledButton(
+                        child:
+                            Text(ReviLocalizations.of(context).homeReviFAQLink),
+                        onPressed: () async => await run(
+                            "rundll32 url.dll,FileProtocolHandler https://www.revi.cc/docs/faq"),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         Padding(
-          padding: const EdgeInsets.only(left: 50.0),
-          child: Flex(
-            direction: Axis.vertical,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (MediaQuery.of(context).size.height >= 400) ...[
-                const SizedBox(
-                  height: 100,
-                )
-              ] else ...[
-                const SizedBox(
-                  height: 25,
-                )
-              ],
-              Text(
-                ReviLocalizations.of(context).homeWelcome,
-                style: FluentTheme.of(context).brightness.isDark
-                    ? const TextStyle(fontSize: 16, color: Color(0xB7FFFFFF))
-                    : const TextStyle(
-                        fontSize: 16,
-                        color: Color.fromARGB(255, 117, 117, 117)),
-              ),
-              const Text(
-                "Revision Tool",
-                style: TextStyle(fontSize: 28),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  ReviLocalizations.of(context).homeDescription,
-                  style: FluentTheme.of(context).brightness.isDark
-                      ? const TextStyle(fontSize: 16, color: Color(0xB7FFFFFF))
-                      : const TextStyle(
-                          fontSize: 16,
-                          color: Color.fromARGB(255, 117, 117, 117)),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 5, bottom: 5),
-                child: SizedBox(
-                  width: 175,
-                  child: Button(
-                    child: Text(ReviLocalizations.of(context).homeReviLink),
-                    onPressed: () async {
-                      await run(
-                          "rundll32 url.dll,FileProtocolHandler https://www.revi.cc");
-                    },
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: SizedBox(
-                  width: 175,
-                  child: FilledButton(
-                    child: Text(ReviLocalizations.of(context).homeReviFAQLink),
-                    onPressed: () async {
-                      await run(
-                          "rundll32 url.dll,FileProtocolHandler https://revios.rignoa.com");
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
+          padding: const EdgeInsets.only(top: 10, bottom: 0, left: 3),
+          child: MediaQuery.of(context).size.width >= 800
+              // spacing: 5, runSpacing: 5
+              ? Flex(
+                  direction: Axis.horizontal,
+                  children: _homeCardButtons
+                      .map((e) => Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 5),
+                              child: e,
+                            ),
+                          ))
+                      .toList())
+              : Column(
+                  children: _homeCardButtons
+                      .map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 3), child: e))
+                      .toList()),
         ),
       ],
     );
