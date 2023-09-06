@@ -1,7 +1,7 @@
 on:
-  watch:
-    types: started
-
+  push:
+    tags:
+      - '*'
 name: "Build & Release"
 jobs:
   build:
@@ -13,22 +13,40 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
+      - run: echo "NEW_VERSION=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_ENV -Append
         
       - run: flutter config --no-analytics
       
       - run: dart --disable-analytics
+
+      - name: Bump MyAppVersion in Inno Setup
+        run: |
+          (Get-Content -Path "inno-setup.iss") -replace '#define MyAppVersion "[\d\.]+"', "#define MyAppVersion `"${{ env.NEW_VERSION }}`"" | Set-Content -Path "inno-setup.iss"
+        shell: pwsh
       
-      - run: flutter pub get
-      
-      - run: flutter build windows
+      - run: flutter gen-l10n
+
+      - run: dart run build_runner build --delete-conflicting-outputs
+
+      - run: flutter build windows --build-name=${{ env.NEW_VERSION }} --build-number=1
       
       - name: Build Installer
         run: |
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "inno-setup.iss"
         shell: cmd
+
+      - name: Calculate SHA256 hash
+        run: |
+          $hash = Get-FileHash "build/RevisionTool-Setup.exe" -Algorithm SHA256
+          echo "SHA256_HASH=$($hash.Hash)" | Out-File -FilePath $env:GITHUB_ENV -Append
         
-      - name: Upload
-        uses: actions/upload-artifact@v3
+      - name: Release
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: RevisionTool-Setup.exe
-          path: build/RevisionTool-Setup.exe
+          repo_token: ${{ secrets.TOKEN }}
+          file: build/RevisionTool-Setup.exe
+          asset_name: RevisionTool-Setup.exe
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: "SHA256: `${{ env.SHA256_HASH }}`"

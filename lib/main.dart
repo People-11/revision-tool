@@ -44,12 +44,7 @@ void main() async {
   else {
       runApp(const MyApp(isSupported: false));
 =======
-  if (registryUtilsService.readString(
-              RegistryHive.localMachine,
-              r'SOFTWARE\Microsoft\Windows NT\CurrentVersion',
-              'EditionSubVersion') ==
-          'ReviOS' &&
-      buildNumber > 19043) {
+  if (buildNumber > 19043) {
     isSupported = true;
 >>>>>>> 7b55fac9006aee9c24e9afdc0dc3c709a4ac630f
   }
