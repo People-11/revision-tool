@@ -5,13 +5,13 @@ import 'package:revitool/l10n/generated/localizations.dart';
 
 // const cardBorderColorForDark = Color.fromARGB(255, 29, 29, 29);
 // const cardBorderColorForLight = Color.fromARGB(255, 229, 229, 229);
-const cardBorderRadius = BorderRadius.all(Radius.circular(5.0));
-const cardDescStyleForDark = TextStyle(
+const _cardBorderRadius = BorderRadius.all(Radius.circular(5.0));
+const _cardDescStyleForDark = TextStyle(
     fontSize: 11,
     color: Color.fromARGB(255, 200, 200, 200),
     overflow: TextOverflow.fade);
 
-const cardDescStyleForLight = TextStyle(
+const _cardDescStyleForLight = TextStyle(
     fontSize: 11,
     color: Color.fromARGB(255, 117, 117, 117),
     overflow: TextOverflow.fade);
@@ -20,31 +20,30 @@ class CardHighlightSwitch extends StatelessWidget {
   const CardHighlightSwitch({
     super.key,
     this.icon,
-    this.label,
+    required this.label,
     this.description,
-    this.switchBool,
+    required this.switchBool,
     required this.function,
     this.requiresRestart,
     this.codeSnippet,
   });
 
   final IconData? icon;
-  final String? label;
+  final String label;
   final String? description;
-  final ValueNotifier<bool>? switchBool;
+  final ValueNotifier<bool> switchBool;
   final ValueChanged function;
   final bool? requiresRestart;
   final String? codeSnippet;
-
-  static bool isOpen = false;
 
   static final _key = Random().nextInt(1000);
   @override
   Widget build(BuildContext context) {
     return Column(
+      key: PageStorageKey(_key),
       children: [
         Card(
-          borderRadius: cardBorderRadius,
+          borderRadius: _cardBorderRadius,
           child: SizedBox(
             // height: 44,
             width: double.infinity,
@@ -61,15 +60,15 @@ class CardHighlightSwitch extends StatelessWidget {
                   Expanded(
                     child: SizedBox(
                       child: InfoLabel(
-                        label: label!,
+                        label: label,
                         labelStyle:
                             const TextStyle(overflow: TextOverflow.ellipsis),
                         child: description != null
                             ? Text(
                                 description ?? "",
                                 style: FluentTheme.of(context).brightness.isDark
-                                    ? cardDescStyleForDark
-                                    : cardDescStyleForLight,
+                                    ? _cardDescStyleForDark
+                                    : _cardDescStyleForLight,
                               )
                             : const SizedBox(),
                       ),
@@ -77,7 +76,7 @@ class CardHighlightSwitch extends StatelessWidget {
                   ),
                   const SizedBox(width: 2.0),
                   ValueListenableBuilder<bool>(
-                      valueListenable: switchBool!,
+                      valueListenable: switchBool,
                       builder: (context, value, child) {
                         return Text(value
                             ? ReviLocalizations.of(context).onStatus
@@ -85,7 +84,7 @@ class CardHighlightSwitch extends StatelessWidget {
                       }),
                   const SizedBox(width: 10.0),
                   ValueListenableBuilder<bool>(
-                    valueListenable: switchBool!,
+                    valueListenable: switchBool,
                     builder: (context, builderValue, child) {
                       return ToggleSwitch(
                         checked: builderValue,
@@ -119,8 +118,8 @@ class CardHighlightSwitch extends StatelessWidget {
           ),
         ),
         if (codeSnippet != null) ...[
-          CardHighlightCodeSnippet(
-              pageStorageKey: _key, codeSnippet: codeSnippet),
+          _CardHighlightCodeSnippet(
+              pageStorageKey: _key, codeSnippet: codeSnippet!),
         ],
         const SizedBox(height: 5.0),
       ],
@@ -128,7 +127,7 @@ class CardHighlightSwitch extends StatelessWidget {
   }
 }
 
-const fluentHighlightTheme = {
+const _fluentHighlightTheme = {
   'root': TextStyle(
     backgroundColor: Color(0x00ffffff),
     color: Color(0xffdddddd),
@@ -190,7 +189,7 @@ class CardHighlight extends StatelessWidget {
       children: [
         Card(
           backgroundColor: backgroundColor,
-          borderRadius: cardBorderRadius,
+          borderRadius: _cardBorderRadius,
           borderColor: borderColor,
           child: SizedBox(
             // height: 44,
@@ -222,16 +221,17 @@ class CardHighlight extends StatelessWidget {
                     child: InfoLabel(
                       label: label!,
                       labelStyle:
-                          const TextStyle(overflow: TextOverflow.ellipsis),
+                          const TextStyle(overflow: TextOverflow.clip),
                       child: description != null
                           ? Text(description ?? "",
                               style: FluentTheme.of(context).brightness.isDark
-                                  ? cardDescStyleForDark
-                                  : cardDescStyleForLight,
-                              overflow: TextOverflow.ellipsis)
+                                  ? _cardDescStyleForDark
+                                  : _cardDescStyleForLight,
+                              overflow: TextOverflow.clip)
                           : const SizedBox(),
                     ),
                   ),
+                   const SizedBox(width: 10.0),
                   child,
                 ],
               ),
@@ -239,8 +239,8 @@ class CardHighlight extends StatelessWidget {
           ),
         ),
         if (codeSnippet != null) ...[
-          CardHighlightCodeSnippet(
-              pageStorageKey: _key, codeSnippet: codeSnippet)
+          _CardHighlightCodeSnippet(
+              pageStorageKey: _key, codeSnippet: codeSnippet!)
         ],
         const SizedBox(height: 5.0),
       ],
@@ -248,16 +248,14 @@ class CardHighlight extends StatelessWidget {
   }
 }
 
-class CardHighlightCodeSnippet extends StatelessWidget {
-  const CardHighlightCodeSnippet({
-    super.key,
+class _CardHighlightCodeSnippet extends StatelessWidget {
+  const _CardHighlightCodeSnippet({
     required this.pageStorageKey,
-    this.codeSnippet,
+    required this.codeSnippet,
   });
 
   final int pageStorageKey;
-  final String? codeSnippet;
-  static bool isOpen = false;
+  final String codeSnippet;
 
   @override
   Widget build(BuildContext context) {
@@ -270,10 +268,10 @@ class CardHighlightCodeSnippet extends StatelessWidget {
           headerShape: (open) => const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(4.0))),
           onStateChanged: (state) {
-            setState(() => isOpen = state);
+            setState(() {});
           },
           header: Text(ReviLocalizations.of(context).moreInformation),
-          content: Text(codeSnippet!),
+          content: Text(codeSnippet),
         ),
       );
     });

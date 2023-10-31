@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:mixin_logger/mixin_logger.dart';
 import 'package:revitool/l10n/generated/localizations.dart';
 import 'package:revitool/screens/home_page.dart';
 import 'package:provider/provider.dart';
@@ -8,46 +12,59 @@ import 'package:revitool/utils.dart';
 import 'package:system_theme/system_theme.dart';
 import 'package:win32_registry/win32_registry.dart';
 import 'package:window_plus/window_plus.dart';
+import 'package:path/path.dart' as p;
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> main() async {
+  await runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    final path = p.join(Directory.systemTemp.path, 'Revision-Tool', 'Logs');
 
-  // createRegistryKey(Registry.localMachine, r'SOFTWARE\Revision\Revision Tool');
+    initLogger(path);
+    i('Revision Tool is starting');
 
-  if (registryUtilsService.readString(RegistryHive.localMachine,
-          r'SOFTWARE\Revision\Revision Tool', 'ThemeMode') ==
-      null) {
-    registryUtilsService.writeString(Registry.localMachine,
-        r'SOFTWARE\Revision\Revision Tool', 'ThemeMode', ThemeMode.system.name);
-    registryUtilsService.writeDword(Registry.localMachine,
-        r'SOFTWARE\Revision\Revision Tool', 'Experimental', 0);
-    registryUtilsService.writeString(Registry.localMachine,
-        r'SOFTWARE\Revision\Revision Tool', 'Language', 'en_US');
-  }
-  final settingsController = AppTheme(SettingsService());
-  await settingsController.loadSettings();
-  await SystemTheme.accentColor.load();
+    if (registryUtilsService.readString(RegistryHive.localMachine,
+            r'SOFTWARE\Revision\Revision Tool', 'ThemeMode') ==
+        null) {
+      i('Creating Revision registry keys');
+      registryUtilsService.writeString(
+          Registry.localMachine,
+          r'SOFTWARE\Revision\Revision Tool',
+          'ThemeMode',
+          ThemeMode.system.name);
+      registryUtilsService.writeDword(Registry.localMachine,
+          r'SOFTWARE\Revision\Revision Tool', 'Experimental', 0);
+      registryUtilsService.writeString(Registry.localMachine,
+          r'SOFTWARE\Revision\Revision Tool', 'Language', 'en_US');
+    }
 
-  await WindowPlus.ensureInitialized(
-    application: 'revision-tool',
-    enableCustomFrame: true,
-    enableEventStreams: false,
-  );
-  await WindowPlus.instance.setMinimumSize(const Size(515, 330));
+    i('Initializing settings controller');
+    final settingsController = AppTheme(SettingsService());
+    await settingsController.loadSettings();
+    await SystemTheme.accentColor.load();
 
-  bool isSupported = false;
+    i('Initializing WindowPlus');
+    await WindowPlus.ensureInitialized(
+      application: 'revision-tool',
+      enableCustomFrame: true,
+      enableEventStreams: false,
+    );
+    await WindowPlus.instance.setMinimumSize(const Size(515, 330));
 
-  if (buildNumber > 19043) {
-    isSupported = true;
-  }
+    if (buildNumber > 19043) {
+      i('isSupported is true');
+      _isSupported = true;
+    }
 
-  runApp(MyApp(isSupported: isSupported));
+    runApp(const MyApp());
+  }, (error, stackTrace) {
+    e('Error: \n$error\n$stackTrace\n\n');
+  });
 }
 
-class MyApp extends StatelessWidget {
-  final bool isSupported;
+bool _isSupported = false;
 
-  const MyApp({super.key, required this.isSupported});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -90,15 +107,15 @@ class MyApp extends StatelessWidget {
               ),
               resources: const ResourceDictionary.light(
                   cardStrokeColorDefault: Color.fromARGB(255, 229, 229, 229))),
-          home: isSupported ? const HomePage() : const UnsupportedError(),
+          home: _isSupported ? const HomePage() : const _UnsupportedError(),
         );
       },
     );
   }
 }
 
-class UnsupportedError extends StatelessWidget {
-  const UnsupportedError({super.key});
+class _UnsupportedError extends StatelessWidget {
+  const _UnsupportedError();
 
   @override
   Widget build(BuildContext context) {
