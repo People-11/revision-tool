@@ -1,6 +1,8 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:revitool/extensions.dart';
+import 'package:revitool/providers/l10n_provider.dart';
+import 'package:revitool/services/registry_utils_service.dart';
 import 'package:revitool/services/tool_update_service.dart';
 import 'package:revitool/theme.dart';
 import 'package:revitool/utils.dart';
@@ -110,7 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // description: context.l10n.settingsEPTDescription,
           switchBool: expBool,
           function: (value) {
-            registryUtilsService.writeDword(
+            RegistryUtilsService.writeDword(
                 Registry.localMachine,
                 r'SOFTWARE\Revision\Revision Tool',
                 'Experimental',
@@ -133,10 +135,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 final data = _toolUpdateService.data;
 
                 if (latestVersion > currentVersion) {
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   _updateTitle.value = context.l10n.settingsUpdateButton;
 
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   showDialog(
                     context: context,
                     builder: (context) => ContentDialog(
@@ -154,7 +156,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             await _toolUpdateService.downloadNewVersion();
                             await _toolUpdateService.installUpdate();
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             _updateTitle.value =
                                 context.l10n.settingsUpdatingStatusSuccess;
                           },
@@ -167,7 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   );
                 } else {
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   _updateTitle.value =
                       context.l10n.settingsUpdatingStatusNotFound;
                 }
@@ -184,26 +186,13 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) {
               setState(() {
                 appLanguage = value ?? 'en_US';
-                registryUtilsService.writeString(
+                RegistryUtilsService.writeString(
                     Registry.localMachine,
                     r'SOFTWARE\Revision\Revision Tool',
                     'Language',
                     appLanguage);
+                context.read<L10nProvider>().changeLocale(appLanguage);
               });
-              showDialog(
-                context: context,
-                builder: (context) => ContentDialog(
-                  content: Text(context.l10n.restartAppDialog),
-                  actions: [
-                    Button(
-                      child: Text(context.l10n.okButton),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    )
-                  ],
-                ),
-              );
             },
             items: languageList,
           ),

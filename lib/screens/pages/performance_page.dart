@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart' as msicons;
 import 'package:revitool/extensions.dart';
+import 'package:revitool/services/registry_utils_service.dart';
 
 import '../../services/performance_service.dart';
 import '../../utils.dart';
@@ -18,8 +19,7 @@ class _PerformancePageState extends State<PerformancePage> {
   final PerformanceService _performanceService = PerformanceService();
   late final _sfBool =
       ValueNotifier<bool>(_performanceService.statusSuperfetch);
-  late final _mcBool =
-      ValueNotifier<bool>(_performanceService.statusMemoryCompression);
+  late final _mcBool = ValueNotifier<bool>(false);
   late final _iTSXBool =
       ValueNotifier<bool>(_performanceService.statusIntelTSX);
   late final _foBool =
@@ -41,6 +41,18 @@ class _PerformancePageState extends State<PerformancePage> {
       ValueNotifier<bool>(_performanceService.status8dot3NamingNTFS);
   late final _ntfsMUBool =
       ValueNotifier<bool>(_performanceService.statusMemoryUsageNTFS);
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _initMemoryCompresionStatus();
+    });
+    super.initState();
+  }
+
+  Future<void> _initMemoryCompresionStatus() async {
+    _mcBool.value = await _performanceService.statusMemoryCompression;
+  }
 
   @override
   void dispose() {
@@ -121,7 +133,7 @@ class _PerformancePageState extends State<PerformancePage> {
                 : _performanceService.disableFullscreenOptimization();
           },
         ),
-        if (w11) ...[
+        if (RegistryUtilsService.isW11) ...[
           CardHighlightSwitch(
             icon: msicons.FluentIcons.desktop_mac_20_regular,
             label: context.l10n.perfOWGLabel,

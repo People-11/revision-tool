@@ -6,7 +6,6 @@ import 'registry_utils_service.dart';
 import 'setup_service.dart';
 
 class PerformanceService implements SetupService {
-  static final _registryUtilsService = RegistryUtilsService();
   static final _shell = Shell();
 
   static const _instance = PerformanceService._private();
@@ -28,10 +27,10 @@ class PerformanceService implements SetupService {
   }
 
   bool get statusSuperfetch {
-    return !(_registryUtilsService.readInt(RegistryHive.localMachine,
+    return !(RegistryUtilsService.readInt(RegistryHive.localMachine,
                 r'SYSTEM\ControlSet001\Services\rdyboost', 'Start') ==
             4 &&
-        _registryUtilsService.readInt(RegistryHive.localMachine,
+        RegistryUtilsService.readInt(RegistryHive.localMachine,
                 r'SYSTEM\ControlSet001\Services\SysMain', 'Start') ==
             4);
   }
@@ -42,47 +41,30 @@ class PerformanceService implements SetupService {
   }
 
   Future<void> disableSuperfetch() async {
-    _registryUtilsService.writeDword(
-        Registry.localMachine,
-        r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-        'isMemoryCompressionEnabled',
-        0);
     await _shell.run(
         '"$directoryExe\\MinSudo.exe" --NoLogo --TrustedInstaller cmd /min /c "$directoryExe\\DisableSF.bat"');
   }
 
   // TODO: Find a batter way to detect Memory Compression
   // isMemoryCompressionEnabled is added by ReviOS, due to complexity of detecting the value without PowerShell
-  bool get statusMemoryCompression {
-    return _registryUtilsService.readInt(
-            RegistryHive.localMachine,
-            r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-            'isMemoryCompressionEnabled') ==
-        1;
+  Future<bool> get statusMemoryCompression async {
+    final value = await _shell.run(
+        'PowerShell -NonInteractive -NoLogo -NoProfile -Command "(Get-MMAgent).MemoryCompression"', );
+        return value.outText == 'True';
   }
 
   Future<void> enableMemoryCompression() async {
     await _shell.run(
         'PowerShell -NonInteractive -NoLogo -NoProfile -Command "Enable-MMAgent -mc"');
-    _registryUtilsService.writeDword(
-        Registry.localMachine,
-        r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-        'isMemoryCompressionEnabled',
-        1);
   }
 
   Future<void> disableMemoryCompression() async {
     await _shell.run(
         'PowerShell -NonInteractive -NoLogo -NoProfile -Command "Disable-MMAgent -mc"');
-    _registryUtilsService.writeDword(
-        Registry.localMachine,
-        r'SYSTEM\ControlSet001\Control\Session Manager\Memory Management\PrefetchParameters',
-        'isMemoryCompressionEnabled',
-        0);
   }
 
   bool get statusIntelTSX {
-    return _registryUtilsService.readInt(
+    return RegistryUtilsService.readInt(
             RegistryHive.localMachine,
             r'SYSTEM\ControlSet001\Control\Session Manager\Kernel',
             'DisableTsx') ==
@@ -90,7 +72,7 @@ class PerformanceService implements SetupService {
   }
 
   void enableIntelTSX() {
-    _registryUtilsService.writeDword(
+    RegistryUtilsService.writeDword(
         Registry.localMachine,
         r'SYSTEM\CurrentControlSet\Control\Session Manager\kernel',
         'DisableTsx',
@@ -98,7 +80,7 @@ class PerformanceService implements SetupService {
   }
 
   void disableIntelTSX() {
-    _registryUtilsService.writeDword(
+    RegistryUtilsService.writeDword(
         Registry.localMachine,
         r'SYSTEM\CurrentControlSet\Control\Session Manager\kernel',
         'DisableTsx',
@@ -106,63 +88,63 @@ class PerformanceService implements SetupService {
   }
 
   bool get statusFullscreenOptimization {
-    return _registryUtilsService.readInt(RegistryHive.currentUser,
+    return RegistryUtilsService.readInt(RegistryHive.currentUser,
             r'System\GameConfigStore', "GameDVR_FSEBehaviorMode") ==
         0;
   }
 
   void enableFullscreenOptimization() {
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 0);
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.currentUser, r'System\GameConfigStore', 'GameDVR_FSEBehavior');
-    _registryUtilsService.deleteValue(Registry.currentUser,
+    RegistryUtilsService.deleteValue(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_HonorUserFSEBehaviorMode');
-    _registryUtilsService.deleteValue(Registry.currentUser,
+    RegistryUtilsService.deleteValue(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_DXGIHonorFSEWindowsCompatible');
-    _registryUtilsService.deleteValue(Registry.currentUser,
+    RegistryUtilsService.deleteValue(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_EFSEFeatureFlags');
 
-    _registryUtilsService.writeDword(Registry.allUsers,
+    RegistryUtilsService.writeDword(Registry.allUsers,
         r'.DEFAULT\System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 0);
-    _registryUtilsService.deleteValue(Registry.allUsers,
+    RegistryUtilsService.deleteValue(Registry.allUsers,
         r'.DEFAULT\System\GameConfigStore', 'GameDVR_FSEBehavior');
-    _registryUtilsService.deleteValue(Registry.allUsers,
+    RegistryUtilsService.deleteValue(Registry.allUsers,
         r'.DEFAULT\System\GameConfigStore', 'GameDVR_HonorUserFSEBehaviorMode');
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.allUsers,
         r'.DEFAULT\System\GameConfigStore',
         'GameDVR_DXGIHonorFSEWindowsCompatible');
-    _registryUtilsService.deleteValue(Registry.allUsers,
+    RegistryUtilsService.deleteValue(Registry.allUsers,
         r'.DEFAULT\System\GameConfigStore', 'GameDVR_EFSEFeatureFlags');
   }
 
   void disableFullscreenOptimization() {
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 2);
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_HonorUserFSEBehaviorMode', 1);
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_DXGIHonorFSEWindowsCompatible', 1);
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_EFSEFeatureFlags', 0);
-    _registryUtilsService.writeDword(Registry.currentUser,
+    RegistryUtilsService.writeDword(Registry.currentUser,
         r'System\GameConfigStore', 'GameDVR_FSEBehavior', 2);
 
-    // _registryUtilsService.writeDword(Registry.allUsers,
+    // RegistryUtilsService.writeDword(Registry.allUsers,
     //     r'System\GameConfigStore', 'GameDVR_FSEBehaviorMode', 2);
-    // _registryUtilsService.writeDword(Registry.allUsers,
+    // RegistryUtilsService.writeDword(Registry.allUsers,
     //     r'System\GameConfigStore', 'GameDVR_HonorUserFSEBehaviorMode', 1);
-    // _registryUtilsService.writeDword(Registry.allUsers,
+    // RegistryUtilsService.writeDword(Registry.allUsers,
     //     r'System\GameConfigStore', 'GameDVR_DXGIHonorFSEWindowsCompatible', 1);
-    // _registryUtilsService.writeDword(Registry.allUsers,
+    // RegistryUtilsService.writeDword(Registry.allUsers,
     //     r'System\GameConfigStore', 'GameDVR_EFSEFeatureFlags', 0);
-    // _registryUtilsService.writeDword(
+    // RegistryUtilsService.writeDword(
     //     Registry.allUsers, r'System\GameConfigStore', 'GameDVR_FSEBehavior', 2);
   }
 
   bool get statusWindowedOptimization {
-    return _registryUtilsService
+    return RegistryUtilsService
             .readString(
                 RegistryHive.currentUser,
                 r'Software\Microsoft\DirectX\UserGpuPreferences',
@@ -172,7 +154,7 @@ class PerformanceService implements SetupService {
   }
 
   void enableWindowedOptimization() {
-    _registryUtilsService.writeString(
+    RegistryUtilsService.writeString(
         Registry.currentUser,
         r'Software\Microsoft\DirectX\UserGpuPreferences',
         'DirectXUserGlobalSettings',
@@ -180,14 +162,14 @@ class PerformanceService implements SetupService {
   }
 
   void disableWindowedOptimization() {
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.currentUser,
         r'Software\Microsoft\DirectX\UserGpuPreferences',
         'DirectXUserGlobalSettings');
   }
 
   bool get statusBackgroundApps {
-    return _registryUtilsService.readInt(
+    return RegistryUtilsService.readInt(
             RegistryHive.localMachine,
             r'Software\Policies\Microsoft\Windows\AppPrivacy',
             'LetAppsRunInBackground') !=
@@ -195,38 +177,38 @@ class PerformanceService implements SetupService {
   }
 
   void enableBackgroundApps() {
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.currentUser,
         r'Software\Microsoft\Windows\CurrentVersion\Search',
         'BackgroundAppGlobalToggle');
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.localMachine,
         r'Software\Microsoft\Windows\CurrentVersion\Search',
         'BackgroundAppGlobalToggle');
 
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.currentUser,
         r'Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications',
         'GlobalUserDisabled');
-    _registryUtilsService.deleteValue(
+    RegistryUtilsService.deleteValue(
         Registry.localMachine,
         r'Software\Policies\Microsoft\Windows\AppPrivacy',
         'LetAppsRunInBackground');
   }
 
   void disableBackgroundApps() {
-    _registryUtilsService.writeDword(
+    RegistryUtilsService.writeDword(
         Registry.localMachine,
         r'Software\Microsoft\Windows\CurrentVersion\Search',
         'BackgroundAppGlobalToggle',
         0);
 
-    _registryUtilsService.writeDword(
+    RegistryUtilsService.writeDword(
         Registry.currentUser,
         r'Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications',
         'GlobalUserDisabled',
         1);
-    _registryUtilsService.writeDword(
+    RegistryUtilsService.writeDword(
         Registry.localMachine,
         r'Software\Policies\Microsoft\Windows\AppPrivacy',
         'LetAppsRunInBackground',
@@ -234,23 +216,23 @@ class PerformanceService implements SetupService {
   }
 
   bool get statusCStates {
-    return _registryUtilsService.readInt(RegistryHive.localMachine,
+    return RegistryUtilsService.readInt(RegistryHive.localMachine,
             r'SYSTEM\ControlSet001\Control\Processor', 'Capabilities') ==
         516198;
   }
 
   void enableCStates() {
-    _registryUtilsService.deleteValue(Registry.localMachine,
+    RegistryUtilsService.deleteValue(Registry.localMachine,
         r'SYSTEM\ControlSet001\Control\Processor', 'Capabilities');
   }
 
   void disableCStates() {
-    _registryUtilsService.writeDword(Registry.localMachine,
+    RegistryUtilsService.writeDword(Registry.localMachine,
         r'SYSTEM\ControlSet001\Control\Processor', 'Capabilities', 516198);
   }
 
   bool get statusLastTimeAccessNTFS {
-    return _registryUtilsService.readInt(
+    return RegistryUtilsService.readInt(
             RegistryHive.localMachine,
             r'SYSTEM\ControlSet001\Control\FileSystem',
             "RefsDisableLastAccessUpdate") ==
@@ -266,7 +248,7 @@ class PerformanceService implements SetupService {
   }
 
   bool get status8dot3NamingNTFS {
-    return _registryUtilsService.readInt(
+    return RegistryUtilsService.readInt(
             RegistryHive.localMachine,
             r'SYSTEM\ControlSet001\Control\FileSystem',
             "NtfsDisable8dot3NameCreation") ==
@@ -282,7 +264,7 @@ class PerformanceService implements SetupService {
   }
 
   bool get statusMemoryUsageNTFS {
-    return _registryUtilsService.readInt(RegistryHive.localMachine,
+    return RegistryUtilsService.readInt(RegistryHive.localMachine,
             r'SYSTEM\ControlSet001\Control\FileSystem', "NtfsMemoryUsage") ==
         2;
   }

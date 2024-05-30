@@ -8,9 +8,13 @@ import 'package:mixin_logger/mixin_logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:revitool/commands/ms_store_command.dart';
 import 'package:revitool/commands/recommendation_command.dart';
+import 'package:revitool/commands/security_command.dart';
+import 'package:revitool/commands/win_package_command.dart';
 import 'package:revitool/l10n/generated/localizations.dart';
+import 'package:revitool/providers/l10n_provider.dart';
 import 'package:revitool/screens/home_page.dart';
 import 'package:provider/provider.dart';
+import 'package:revitool/services/registry_utils_service.dart';
 import 'package:revitool/theme.dart';
 import 'package:revitool/utils.dart';
 import 'package:system_theme/system_theme.dart';
@@ -21,16 +25,24 @@ import 'package:path/path.dart' as p;
 Future<void> main(List<String> args) async {
   final path = p.join(Directory.systemTemp.path, 'Revision-Tool', 'Logs');
 
+  if (Directory(path).existsSync()) {
+    try {
+      Directory(path).deleteSync(recursive: true);
+    } catch (e) {
+      stderr.writeln('Failed to delete logs directory: $e');
+    }
+  }
+
   initLogger(path);
   i('Revision Tool is starting');
-
-  if (buildNumber > 19043) {
+  
+  if (RegistryUtilsService.isSupported) {
     i('isSupported is true');
     _isSupported = true;
   }
 
   if (args.isNotEmpty) {
-    if (!_isSupported) {
+    if (!_isSupported && !Directory(ameTemp).existsSync()) {
       // TODO: unify messages
       e('Unsupported build detected. Please apply ReviOS on your system');
       stderr.writeln(
@@ -41,7 +53,9 @@ Future<void> main(List<String> args) async {
     final packageInfo = await PackageInfo.fromPlatform();
     stdout.writeln("Running Revision Tool ${packageInfo.version}");
     final runner = CommandRunner<String>("revitool", "Revision Tool CLI")
-      ..addCommand(MSStoreCommand());
+      ..addCommand(MSStoreCommand())
+      ..addCommand(DefenderCommand())
+      ..addCommand(WindowsPackageCommand());
     // ..addCommand(RecommendationCommand());
     await runner.run(args);
     exit(0);
@@ -49,15 +63,15 @@ Future<void> main(List<String> args) async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (registryUtilsService.readString(RegistryHive.localMachine,
+  if (RegistryUtilsService.readString(RegistryHive.localMachine,
           r'SOFTWARE\Revision\Revision Tool', 'ThemeMode') ==
       null) {
     i('Creating Revision registry keys');
-    registryUtilsService.writeString(Registry.localMachine,
+    RegistryUtilsService.writeString(Registry.localMachine,
         r'SOFTWARE\Revision\Revision Tool', 'ThemeMode', ThemeMode.system.name);
-    registryUtilsService.writeDword(Registry.localMachine,
+    RegistryUtilsService.writeDword(Registry.localMachine,
         r'SOFTWARE\Revision\Revision Tool', 'Experimental', 0);
-    registryUtilsService.writeString(Registry.localMachine,
+    RegistryUtilsService.writeString(Registry.localMachine,
         r'SOFTWARE\Revision\Revision Tool', 'Language', 'en_US');
   }
 
@@ -84,10 +98,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppTheme(SettingsService()),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppTheme(SettingsService())),
+        ChangeNotifierProvider(create: (_) => L10nProvider(appLanguage)),
+      ],
       builder: (context, _) {
         final appTheme = context.watch<AppTheme>();
+        final appLocale = context.watch<L10nProvider>().locale;
         return FluentApp(
           title: 'Revision Tool',
           debugShowCheckedModeBanner: false,
@@ -96,7 +114,7 @@ class MyApp extends StatelessWidget {
             ReviLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          locale: Locale(appLanguage.split('_')[0], appLanguage.split('_')[1]),
+          locale: appLocale,
           supportedLocales: ReviLocalizations.supportedLocales,
           themeMode: appTheme.themeMode,
           color: appTheme.color,

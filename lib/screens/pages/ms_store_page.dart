@@ -19,7 +19,7 @@ class _MSStorePageState extends State<MSStorePage>
   final _textEditingController = TextEditingController();
   List<ProductsList> _productsList = [];
   final _msStoreService = MSStoreService();
-  String _selectedRing = "Retail";
+  String _selectedRing = "RP";
 
   @override
   void dispose() {
@@ -30,8 +30,7 @@ class _MSStorePageState extends State<MSStorePage>
   Future<void> _onSearchButtonPressed() async {
     final query = _textEditingController.text;
 
-    if (query.startsWith("9") && query.length == 12 ||
-        query.startsWith("XP") && query.length == 14) {
+    if (query.startsWith("9") || query.startsWith("XP")) {
       await showInstallDialog(
           context, context.l10n.msstoreSearchingPackages, query, _selectedRing);
     } else if (query.startsWith('https://') &&
@@ -53,7 +52,7 @@ class _MSStorePageState extends State<MSStorePage>
   static const items2 = [
     ComboBoxItem(
       value: "Retail",
-      child: Text("Retail (Stable)"),
+      child: Text("Retail (Base)"),
     ),
     ComboBoxItem(
       value: "RP",
@@ -134,11 +133,12 @@ class _MSStorePageState extends State<MSStorePage>
 
     await _msStoreService.startProcess(productID, _selectedRing);
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     Navigator.pop(context);
 
     if (_msStoreService.packages.isEmpty) {
       showNotFound(context);
+      return;
     }
     showSelectPackages(productID);
   }
@@ -183,7 +183,7 @@ class _MSStorePageState extends State<MSStorePage>
                 return;
               }
 
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pop(context);
 
               await showDialog(
@@ -197,7 +197,7 @@ class _MSStorePageState extends State<MSStorePage>
                 ),
               );
 
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.pop(context, 'Successfully downloaded');
             },
           ),
