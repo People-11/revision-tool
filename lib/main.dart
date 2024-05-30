@@ -40,7 +40,7 @@ Future<void> main(List<String> args) async {
     i('isSupported is true');
     _isSupported = true;
   }
-
+  _isSupported = true;
   if (args.isNotEmpty) {
     if (!_isSupported && !Directory(ameTemp).existsSync()) {
       // TODO: unify messages
